@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IOweYou</string>
+
+    <!-- Bottom nav -->
+    <string name="nav_home">Home</string>
+    <string name="nav_scan">Scan</string>
+    <string name="nav_friends">Friends</string>
+
+    <!-- Login -->
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="app_tagline">Split bills, not friendships.</string>
+
+    <!-- Home -->
+    <string name="recent_expenses">Recent Expenses</string>
+
+    <!-- Scan -->
+    <string name="expense_title_hint">Expense title (e.g. Dinner at Joe\'s)</string>
+    <string name="capture">Capture</string>
+    <string name="retake">Retake</string>
+    <string name="save_expense">Save Expense</string>
+    <string name="add_item">+ Add Item</string>
+
+    <!-- Friends -->
+    <string name="search_hint">Search by email…</string>
+    <string name="pending_requests">Pending Requests</string>
+    <string name="your_friends">Your Friends</string>
+    <string name="accept">Accept</string>
+    <string name="decline">Decline</string>
+    <string name="add_friend">Add</string>
+
+    <!-- Detail -->
+    <string name="settle_up">Mark as Settled</string>
+    <string name="settled">Settled</string>
+    <string name="pay_via_venmo">Pay via Venmo</string>
+</resources>
