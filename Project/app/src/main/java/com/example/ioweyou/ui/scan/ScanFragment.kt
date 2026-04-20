@@ -271,9 +271,11 @@ class ScanFragment : Fragment() {
                     }
                 }
             } else {
+                val longDigitRun = Regex("""\d{4,}""")
                 val nameWithIdx = allLines.mapIndexedNotNull { idx, nl ->
                     if (!priceRegex.containsMatchIn(nl.text) &&
                         skipKeywords.none { nl.text.lowercase().contains(it) } &&
+                        !longDigitRun.containsMatchIn(nl.text) &&
                         nl.text.length >= 4 &&
                         hasEnoughLetters(nl.text)) Pair(idx, nl) else null
                 }
