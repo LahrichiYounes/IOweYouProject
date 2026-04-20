@@ -165,14 +165,14 @@ class ScanFragment : Fragment() {
     }
 
     private fun parseOcrResult(result: Text): List<LineItem> {
-        val priceRegex = Regex("""(?<!\w)[8Ss$]?(\d{1,3}\.\d{2})(?!\d)""")
+        val priceRegex = Regex("""(?<!\w)[8Ss$]?([L\d]{1,3}\.\d{2})(?!\d)""")
         val skipKeywords = listOf(
             "total", "subtotal", "change", "cash", "credit", "debit",
             "visa", "mastercard", "memb", "thank", "savings", "coupon",
             "instant", "balance", "payment", "tender", "wholesale", "costco",
             "self-checkout", "self checkout", "receipt", "store", "ref#", "auth",
             "usd", "sales", "returned", "items total",
-            "card", "chip", "approved", "reference", "order", "date", "status"
+            "card", "chip", "approved", "reference", "date", "status"
         )
 
         data class OcrLine(val text: String, val mid: Int)
@@ -206,7 +206,7 @@ class ScanFragment : Fragment() {
 
         for (pl in priceLines) {
             val match = priceRegex.find(pl.text) ?: continue
-            val price = match.groupValues[1].toDoubleOrNull() ?: continue
+            val price = match.groupValues[1].replace('L', '1').toDoubleOrNull() ?: continue
             if (price <= 0 || price > 9999) continue
 
             val sameLine = pl.text.substring(0, match.range.first).trim().trimEnd('.', '-', ' ', '*')
@@ -224,7 +224,7 @@ class ScanFragment : Fragment() {
             val availableItems = itemCodeLines.toMutableList()
             for (pl in unmatchedPrices) {
                 val match = priceRegex.find(pl.text) ?: continue
-                val price = match.groupValues[1].toDoubleOrNull() ?: continue
+                val price = match.groupValues[1].replace('L', '1').toDoubleOrNull() ?: continue
                 if (price <= 0) continue
 
                 if (availableItems.isNotEmpty()) {
@@ -257,7 +257,7 @@ class ScanFragment : Fragment() {
                 val usedMids = mutableSetOf<Int>()
                 for (pl in remainingPrices) {
                     val match = priceRegex.find(pl.text) ?: continue
-                    val price = match.groupValues[1].toDoubleOrNull() ?: continue
+                    val price = match.groupValues[1].replace('L', '1').toDoubleOrNull() ?: continue
                     if (price <= 0 || price > 9999) continue
                     val best = standaloneCandidates
                         .filter { it.mid !in usedMids }
@@ -288,7 +288,7 @@ class ScanFragment : Fragment() {
                     if (nearLabel) continue
 
                     val match = priceRegex.find(pl.text) ?: continue
-                    val price = match.groupValues[1].toDoubleOrNull() ?: continue
+                    val price = match.groupValues[1].replace('L', '1').toDoubleOrNull() ?: continue
                     if (price <= 0 || price > 9999) continue
 
                     val best = nameWithIdx
