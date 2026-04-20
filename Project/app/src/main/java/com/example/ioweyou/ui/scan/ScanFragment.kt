@@ -333,9 +333,11 @@ class ScanFragment : Fragment() {
     }
 
     private fun saveExpense() {
+        Log.d(TAG, "saveExpense called")
         val title = binding.etExpenseTitle.text.toString().trim()
         if (title.isEmpty()) {
-            binding.etExpenseTitle.error = "Enter a title"
+            Toast.makeText(requireContext(), "Enter an expense title first", Toast.LENGTH_SHORT).show()
+            binding.etExpenseTitle.requestFocus()
             return
         }
         var items = lineItemAdapter.getItems().toMutableList()
