@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.ioweyou.databinding.FragmentFriendsBinding
 import com.example.ioweyou.model.User
@@ -35,7 +36,8 @@ class FriendsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         friendAdapter = FriendRowAdapter(viewModel.currentUser.uid) { friend ->
-            // Could navigate to a per-friend detail screen in future
+            val action = FriendsFragmentDirections.actionFriendsFragmentToFriendDetailFragment(friend.uid)
+            findNavController().navigate(action)
         }
         requestAdapter = FriendRequestAdapter(
             onAccept = { request -> viewModel.acceptFriendRequest(request) },

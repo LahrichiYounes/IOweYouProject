@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.os.Bundle
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -66,7 +68,17 @@ class HomeFragment : Fragment() {
         }
 
         binding.fabNewExpense.setOnClickListener {
-            findNavController().navigate(R.id.scanFragment)
+            AlertDialog.Builder(requireContext())
+                .setTitle("New Expense")
+                .setItems(arrayOf("Scan Receipt", "Enter Manually")) { _, which ->
+                    if (which == 0) {
+                        findNavController().navigate(R.id.scanFragment)
+                    } else {
+                        val args = Bundle().apply { putBoolean("manualEntry", true) }
+                        findNavController().navigate(R.id.scanFragment, args)
+                    }
+                }
+                .show()
         }
     }
 

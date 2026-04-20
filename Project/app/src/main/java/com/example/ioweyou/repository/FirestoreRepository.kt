@@ -22,12 +22,19 @@ class FirestoreRepository {
             .toObject(User::class.java)
     }
 
-    suspend fun searchUserByEmail(email: String): List<User> {
-        val snapshot = db.collection("users")
-            .whereEqualTo("email", email)
-            .limit(10)
-            .get().await()
-        return snapshot.documents.mapNotNull { it.toObject(User::class.java) }
+    suspend fun searchUsers(query: String): List<User> {
+        val byEmail = db.collection("users")
+            .whereEqualTo("email", query)
+            .limit(5).get().await()
+            .documents.mapNotNull { it.toObject(User::class.java) }
+
+        val byName = db.collection("users")
+            .whereGreaterThanOrEqualTo("displayName", query)
+            .whereLessThanOrEqualTo("displayName", query + "\uF8FF")
+            .limit(5).get().await()
+            .documents.mapNotNull { it.toObject(User::class.java) }
+
+        return (byEmail + byName).distinctBy { it.uid }
     }
 
     fun listenToFriends(uid: String, onUpdate: (List<User>) -> Unit): ListenerRegistration {

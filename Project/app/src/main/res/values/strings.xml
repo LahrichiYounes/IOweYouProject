@@ -22,7 +22,7 @@
     <string name="add_item">+ Add Item</string>
 
     <!-- Friends -->
-    <string name="search_hint">Search by email…</string>
+    <string name="search_hint">Search by name or email…</string>
     <string name="pending_requests">Pending Requests</string>
     <string name="your_friends">Your Friends</string>
     <string name="accept">Accept</string>

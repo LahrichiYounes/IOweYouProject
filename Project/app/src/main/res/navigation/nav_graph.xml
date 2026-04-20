@@ -25,7 +25,22 @@
         android:id="@+id/friendsFragment"
         android:name="com.example.ioweyou.ui.friends.FriendsFragment"
         android:label="Friends"
-        tools:layout="@layout/fragment_friends" />
+        tools:layout="@layout/fragment_friends">
+        <action
+            android:id="@+id/action_friendsFragment_to_friendDetailFragment"
+            app:destination="@id/friendDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/friendDetailFragment"
+        android:name="com.example.ioweyou.ui.friends.FriendDetailFragment"
+        android:label="Friend Detail"
+        tools:layout="@layout/fragment_friend_detail">
+        <argument
+            android:name="friendUid"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
 
     <fragment
         android:id="@+id/expenseDetailFragment"

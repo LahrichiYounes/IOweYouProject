@@ -61,14 +61,20 @@ class ScanFragment : Fragment() {
         binding.rvLineItems.layoutManager = LinearLayoutManager(requireContext())
         binding.rvLineItems.adapter = lineItemAdapter
 
-        showCameraMode()
-
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
-            == android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
-            startCamera()
+        val manualEntry = arguments?.getBoolean("manualEntry", false) ?: false
+        if (manualEntry) {
+            lineItems.add(LineItem(name = "", price = 0.0))
+            lineItemAdapter.notifyDataSetChanged()
+            showReviewMode()
         } else {
-            requestPermission.launch(Manifest.permission.CAMERA)
+            showCameraMode()
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                startCamera()
+            } else {
+                requestPermission.launch(Manifest.permission.CAMERA)
+            }
         }
 
         binding.btnCapture.setOnClickListener { takePhoto() }
@@ -161,7 +167,7 @@ class ScanFragment : Fragment() {
     private fun parseOcrResult(result: Text): List<LineItem> {
         val priceRegex = Regex("""(?<!\w)[8Ss$]?(\d{1,3}\.\d{2})(?!\d)""")
         val skipKeywords = listOf(
-            "total", "subtotal", "tax", "change", "cash", "credit", "debit",
+            "total", "subtotal", "change", "cash", "credit", "debit",
             "visa", "mastercard", "memb", "thank", "savings", "coupon",
             "instant", "balance", "payment", "tender", "wholesale", "costco",
             "self-checkout", "self checkout", "receipt", "store", "ref#", "auth",

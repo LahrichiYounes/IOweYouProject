@@ -82,9 +82,9 @@ class MainViewModel : ViewModel() {
         return map
     }
 
-    fun searchUsers(email: String) {
+    fun searchUsers(query: String) {
         viewModelScope.launch {
-            _searchResults.value = repo.searchUserByEmail(email)
+            _searchResults.value = repo.searchUsers(query)
         }
     }
 
