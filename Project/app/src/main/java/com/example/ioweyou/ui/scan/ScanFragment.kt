@@ -55,7 +55,8 @@ class ScanFragment : Fragment() {
 
         lineItemAdapter = LineItemAdapter(
             lineItems,
-            getFriends = { viewModel.friends.value ?: emptyList() }
+            getFriends = { viewModel.friends.value ?: emptyList() },
+            onChanged = { updateSubtotal() }
         )
 
         binding.rvLineItems.layoutManager = LinearLayoutManager(requireContext())
@@ -82,6 +83,8 @@ class ScanFragment : Fragment() {
         binding.btnRetake.setOnClickListener {
             lineItems.clear()
             lineItemAdapter.notifyDataSetChanged()
+            binding.etTax.setText("")
+            updateSubtotal()
             showCameraMode()
         }
 
@@ -151,6 +154,7 @@ class ScanFragment : Fragment() {
                     lineItems.add(LineItem(name = "", price = 0.0))
                 }
                 lineItemAdapter.notifyDataSetChanged()
+                updateSubtotal()
                 showReviewMode()
             }
             .addOnFailureListener { e ->
@@ -160,6 +164,7 @@ class ScanFragment : Fragment() {
                 lineItems.clear()
                 lineItems.add(LineItem(name = "", price = 0.0))
                 lineItemAdapter.notifyDataSetChanged()
+                updateSubtotal()
                 showReviewMode()
             }
     }
@@ -310,6 +315,11 @@ class ScanFragment : Fragment() {
         return items
     }
 
+    private fun updateSubtotal() {
+        val subtotal = lineItems.sumOf { it.price }
+        binding.tvSubtotal.text = "Subtotal: ${java.text.NumberFormat.getCurrencyInstance().format(subtotal)}"
+    }
+
     private fun showCameraMode() {
         binding.cameraPreview.visibility = View.VISIBLE
         binding.btnCapture.visibility = View.VISIBLE
@@ -328,22 +338,30 @@ class ScanFragment : Fragment() {
             binding.etExpenseTitle.error = "Enter a title"
             return
         }
-        val items = lineItemAdapter.getItems()
+        var items = lineItemAdapter.getItems().toMutableList()
         if (items.isEmpty() || items.all { it.price == 0.0 }) {
             Toast.makeText(requireContext(), "Add at least one item with a price", Toast.LENGTH_SHORT).show()
             return
         }
 
+        val tax = binding.etTax.text.toString().toDoubleOrNull() ?: 0.0
         val participantUids = items.flatMap { it.assignees }.distinct()
         val friends = viewModel.friends.value ?: emptyList()
         val participants = friends.filter { it.uid in participantUids }
+
+        if (tax > 0.0) {
+            val allUids = (participantUids + viewModel.currentUser.uid).distinct()
+            items.add(LineItem(name = "Tax / Tip", price = tax, assignees = allUids))
+        }
 
         viewModel.saveExpense(title, items, participants)
 
         Toast.makeText(requireContext(), "Expense saved!", Toast.LENGTH_SHORT).show()
         lineItems.clear()
         binding.etExpenseTitle.setText("")
+        binding.etTax.setText("")
         lineItemAdapter.notifyDataSetChanged()
+        updateSubtotal()
         showCameraMode()
         binding.btnCapture.isEnabled = true
     }

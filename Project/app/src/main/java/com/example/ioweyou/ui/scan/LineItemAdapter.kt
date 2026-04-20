@@ -12,7 +12,8 @@ import com.example.ioweyou.model.User
 
 class LineItemAdapter(
     private val items: MutableList<LineItem>,
-    private val getFriends: () -> List<User>
+    private val getFriends: () -> List<User>,
+    private val onChanged: () -> Unit = {}
 ) : RecyclerView.Adapter<LineItemAdapter.ViewHolder>() {
 
     inner class ViewHolder(private val binding: RowLineItemBinding) :
@@ -36,6 +37,7 @@ class LineItemAdapter(
             nameWatcher = object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) {
                     items[adapterPosition] = items[adapterPosition].copy(name = s.toString())
+                    onChanged()
                 }
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -44,6 +46,7 @@ class LineItemAdapter(
                 override fun afterTextChanged(s: Editable?) {
                     val price = s.toString().toDoubleOrNull() ?: 0.0
                     items[adapterPosition] = items[adapterPosition].copy(price = price)
+                    onChanged()
                 }
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -56,6 +59,7 @@ class LineItemAdapter(
             binding.btnDeleteItem.setOnClickListener {
                 items.removeAt(adapterPosition)
                 notifyItemRemoved(adapterPosition)
+                onChanged()
             }
         }
 
