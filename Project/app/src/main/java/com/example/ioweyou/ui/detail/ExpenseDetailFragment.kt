@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.ioweyou.databinding.FragmentExpenseDetailBinding
@@ -64,12 +65,24 @@ class ExpenseDetailFragment : Fragment() {
                 sb.appendLine("$name owes ${currency.format(owed)}")
             }
         }
-        binding.tvBreakdown.text = sb.toString().trimEnd()
+        if (sb.isBlank()) {
+            binding.tvBreakdown.text = "No items were assigned to specific people.\nTotal: ${currency.format(expense.totalAmount)} paid by ${expense.paidByName}"
+        } else {
+            val payerLabel = if (expense.paidBy == uid) "You" else expense.paidByName
+            binding.tvBreakdown.text = "$payerLabel paid ${currency.format(expense.totalAmount)}\n\n${sb.toString().trimEnd()}"
+        }
 
         if (expense.settled) {
             binding.btnSettle.visibility = View.GONE
+            binding.btnEdit.visibility = View.GONE
             binding.tvSettledBadge.visibility = View.VISIBLE
         } else {
+            binding.btnEdit.visibility = View.VISIBLE
+            binding.btnEdit.setOnClickListener {
+                val action = ExpenseDetailFragmentDirections
+                    .actionExpenseDetailFragmentToScanFragment(editExpenseId = expense.id)
+                findNavController().navigate(action)
+            }
             binding.tvSettledBadge.visibility = View.GONE
             binding.btnSettle.visibility = View.VISIBLE
             binding.btnSettle.setOnClickListener {

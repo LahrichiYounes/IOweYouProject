@@ -71,6 +71,7 @@ class LoginActivity : AppCompatActivity() {
                     val user = User(
                         uid = fb.uid,
                         displayName = fb.displayName ?: "",
+                        displayNameLower = (fb.displayName ?: "").lowercase(),
                         email = fb.email ?: "",
                         photoUrl = fb.photoUrl?.toString() ?: ""
                     )

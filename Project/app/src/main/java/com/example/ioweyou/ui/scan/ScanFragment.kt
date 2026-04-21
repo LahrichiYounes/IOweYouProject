@@ -17,6 +17,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.ioweyou.databinding.FragmentScanBinding
 import com.example.ioweyou.model.LineItem
@@ -35,6 +37,8 @@ class ScanFragment : Fragment() {
     private var imageCapture: ImageCapture? = null
     private val lineItems = mutableListOf<LineItem>()
     private lateinit var lineItemAdapter: LineItemAdapter
+    private val args: ScanFragmentArgs by navArgs()
+    private var editExpenseId: String = ""
 
     private val requestPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -62,12 +66,27 @@ class ScanFragment : Fragment() {
         binding.rvLineItems.layoutManager = LinearLayoutManager(requireContext())
         binding.rvLineItems.adapter = lineItemAdapter
 
+        editExpenseId = args.editExpenseId
+        if (editExpenseId.isNotEmpty()) {
+            val expense = viewModel.expenses.value?.find { it.id == editExpenseId }
+            if (expense != null) {
+                binding.etExpenseTitle.setText(expense.title)
+                val parsedItems = expense.getParsedLineItems()
+                lineItems.clear()
+                lineItems.addAll(parsedItems)
+                if (lineItems.isEmpty()) lineItems.add(LineItem(name = "", price = 0.0))
+                lineItemAdapter.notifyDataSetChanged()
+                updateSubtotal()
+            }
+            showReviewMode()
+        }
+
         val manualEntry = arguments?.getBoolean("manualEntry", false) ?: false
-        if (manualEntry) {
+        if (editExpenseId.isEmpty() && manualEntry) {
             lineItems.add(LineItem(name = "", price = 0.0))
             lineItemAdapter.notifyDataSetChanged()
             showReviewMode()
-        } else {
+        } else if (editExpenseId.isEmpty()) {
             showCameraMode()
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
                 == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -356,16 +375,21 @@ class ScanFragment : Fragment() {
             items.add(LineItem(name = "Tax / Tip", price = tax, assignees = allUids))
         }
 
-        viewModel.saveExpense(title, items, participants)
-
-        Toast.makeText(requireContext(), "Expense saved!", Toast.LENGTH_SHORT).show()
-        lineItems.clear()
-        binding.etExpenseTitle.setText("")
-        binding.etTax.setText("")
-        lineItemAdapter.notifyDataSetChanged()
-        updateSubtotal()
-        showCameraMode()
-        binding.btnCapture.isEnabled = true
+        if (editExpenseId.isNotEmpty()) {
+            viewModel.updateExpense(editExpenseId, title, items, participants)
+            Toast.makeText(requireContext(), "Expense updated!", Toast.LENGTH_SHORT).show()
+            findNavController().popBackStack()
+        } else {
+            viewModel.saveExpense(title, items, participants)
+            Toast.makeText(requireContext(), "Expense saved!", Toast.LENGTH_SHORT).show()
+            lineItems.clear()
+            binding.etExpenseTitle.setText("")
+            binding.etTax.setText("")
+            lineItemAdapter.notifyDataSetChanged()
+            updateSubtotal()
+            showCameraMode()
+            binding.btnCapture.isEnabled = true
+        }
     }
 
     override fun onDestroyView() {

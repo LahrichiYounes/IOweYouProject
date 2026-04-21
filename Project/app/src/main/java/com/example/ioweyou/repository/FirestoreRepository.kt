@@ -23,14 +23,16 @@ class FirestoreRepository {
     }
 
     suspend fun searchUsers(query: String): List<User> {
+        val lowerQuery = query.lowercase()
+
         val byEmail = db.collection("users")
-            .whereEqualTo("email", query)
+            .whereEqualTo("email", lowerQuery)
             .limit(5).get().await()
             .documents.mapNotNull { it.toObject(User::class.java) }
 
         val byName = db.collection("users")
-            .whereGreaterThanOrEqualTo("displayName", query)
-            .whereLessThanOrEqualTo("displayName", query + "\uF8FF")
+            .whereGreaterThanOrEqualTo("displayNameLower", lowerQuery)
+            .whereLessThanOrEqualTo("displayNameLower", lowerQuery + "\uF8FF")
             .limit(5).get().await()
             .documents.mapNotNull { it.toObject(User::class.java) }
 
@@ -123,6 +125,26 @@ class FirestoreRepository {
         )
         val ref = db.collection("expenses").add(data).await()
         return ref.id
+    }
+
+    suspend fun updateExpense(expense: Expense) {
+        val data = hashMapOf(
+            "title" to expense.title,
+            "paidBy" to expense.paidBy,
+            "paidByName" to expense.paidByName,
+            "participants" to expense.participants,
+            "totalAmount" to expense.totalAmount,
+            "timestamp" to expense.timestamp,
+            "settled" to expense.settled,
+            "lineItems" to expense.getParsedLineItems().map { item ->
+                mapOf(
+                    "name" to item.name,
+                    "price" to item.price,
+                    "assignees" to item.assignees
+                )
+            }
+        )
+        db.collection("expenses").document(expense.id).set(data).await()
     }
 
     suspend fun markExpenseSettled(expenseId: String) {

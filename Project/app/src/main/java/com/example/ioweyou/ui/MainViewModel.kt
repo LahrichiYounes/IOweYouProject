@@ -139,6 +139,37 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun updateExpense(
+        expenseId: String,
+        title: String,
+        lineItems: List<LineItem>,
+        participants: List<User>
+    ) {
+        viewModelScope.launch {
+            val uid = currentUser.uid
+            val allParticipantUids = (participants.map { it.uid } + uid).distinct()
+            val total = lineItems.sumOf { it.price }
+
+            val expense = Expense(
+                id = expenseId,
+                title = title,
+                paidBy = uid,
+                paidByName = currentUser.displayName,
+                participants = allParticipantUids,
+                lineItems = lineItems.map { item ->
+                    mapOf(
+                        "name" to item.name,
+                        "price" to item.price,
+                        "assignees" to item.assignees
+                    )
+                },
+                totalAmount = total,
+                timestamp = System.currentTimeMillis()
+            )
+            repo.updateExpense(expense)
+        }
+    }
+
     fun markSettled(expenseId: String) {
         viewModelScope.launch {
             repo.markExpenseSettled(expenseId)
