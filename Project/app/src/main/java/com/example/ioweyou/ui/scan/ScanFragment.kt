@@ -104,8 +104,20 @@ class ScanFragment : Fragment() {
             lineItemAdapter.notifyDataSetChanged()
             binding.etTax.setText("")
             updateSubtotal()
+            binding.btnCapture.isEnabled = true
             showCameraMode()
         }
+
+        binding.btnAddItem.setOnClickListener {
+            lineItems.add(LineItem(name = "", price = 0.0))
+            lineItemAdapter.notifyItemInserted(lineItems.size - 1)
+        }
+
+        binding.etTax.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) { updateSubtotal() }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
 
         binding.btnSave.setOnClickListener { saveExpense() }
     }
@@ -161,22 +173,28 @@ class ScanFragment : Fragment() {
         val inputImage = InputImage.fromBitmap(bitmap, 0)
         recognizer.process(inputImage)
             .addOnSuccessListener { result ->
+                recognizer.close()
                 result.textBlocks.forEachIndexed { bi, block ->
                     block.lines.forEachIndexed { li, line ->
                         val midY = line.boundingBox?.let { (it.top + it.bottom) / 2 } ?: -1
                         Log.d(TAG, "OCR [$bi][$li] midY=$midY: ${line.text}")
                     }
                 }
+                val (parsedItems, detectedTax) = parseOcrResult(result)
                 lineItems.clear()
-                lineItems.addAll(parseOcrResult(result))
+                lineItems.addAll(parsedItems)
                 if (lineItems.isEmpty()) {
                     lineItems.add(LineItem(name = "", price = 0.0))
+                }
+                if (detectedTax > 0.0) {
+                    binding.etTax.setText(String.format("%.2f", detectedTax))
                 }
                 lineItemAdapter.notifyDataSetChanged()
                 updateSubtotal()
                 showReviewMode()
             }
             .addOnFailureListener { e ->
+                recognizer.close()
                 Log.e(TAG, "OCR failed", e)
                 binding.btnCapture.isEnabled = true
                 Toast.makeText(requireContext(), "OCR failed, add items manually", Toast.LENGTH_SHORT).show()
@@ -188,7 +206,7 @@ class ScanFragment : Fragment() {
             }
     }
 
-    private fun parseOcrResult(result: Text): List<LineItem> {
+    private fun parseOcrResult(result: Text): Pair<List<LineItem>, Double> {
         val priceRegex = Regex("""(?<!\w)[8Ss$]?([L\d]{1,3}\.\d{2})(?!\d)""")
         val skipKeywords = listOf(
             "total", "subtotal", "change", "cash", "credit", "debit",
@@ -202,10 +220,16 @@ class ScanFragment : Fragment() {
         data class OcrLine(val text: String, val mid: Int)
 
         val allLines = mutableListOf<OcrLine>()
+        val noDecimalPrice = Regex("""^[8Ss$](\d{1,2})(\d{2})$""")
         for (block in result.textBlocks) {
             for (line in block.lines) {
                 val box = line.boundingBox ?: continue
-                allLines.add(OcrLine(line.text.trim(), (box.top + box.bottom) / 2))
+                val text = line.text.trim()
+                val ndMatch = noDecimalPrice.matchEntire(text)
+                val normalized = if (ndMatch != null)
+                    "\$${ndMatch.groupValues[1]}.${ndMatch.groupValues[2]}"
+                else text
+                allLines.add(OcrLine(normalized, (box.top + box.bottom) / 2))
             }
         }
 
@@ -296,8 +320,10 @@ class ScanFragment : Fragment() {
                 }
             } else {
                 val longDigitRun = Regex("""\d{4,}""")
+                val firstPriceIdx = remainingPrices.minOfOrNull { allLines.indexOf(it) } ?: 0
                 val nameWithIdx = allLines.mapIndexedNotNull { idx, nl ->
-                    if (!priceRegex.containsMatchIn(nl.text) &&
+                    if (idx >= firstPriceIdx &&
+                        !priceRegex.containsMatchIn(nl.text) &&
                         skipKeywords.none { nl.text.lowercase().contains(it) } &&
                         !longDigitRun.containsMatchIn(nl.text) &&
                         nl.text.length >= 4 &&
@@ -331,12 +357,37 @@ class ScanFragment : Fragment() {
             }
         }
 
-        return items
+        val taxPriceRegex = Regex("""(?<!\w)[8Ss$]?([L\d0O]{1,3}\.\d{2})(?!\d)""")
+        var detectedTax = 0.0
+        val taxLineIdx = allLines.indexOfFirst { it.text.lowercase().contains("tax") }
+        if (taxLineIdx >= 0) {
+            val sameLineMatch = taxPriceRegex.find(allLines[taxLineIdx].text)
+            if (sameLineMatch != null) {
+                detectedTax = sameLineMatch.groupValues[1]
+                    .replace('L', '1').replace('O', '0').toDoubleOrNull() ?: 0.0
+            } else {
+                val nearestPriceIdx = allLines.indices.filter { idx ->
+                    idx != taxLineIdx &&
+                    taxPriceRegex.containsMatchIn(allLines[idx].text) &&
+                    skipKeywords.none { kw -> allLines[idx].text.lowercase().contains(kw) }
+                }.minByOrNull { kotlin.math.abs(it - taxLineIdx) }
+                if (nearestPriceIdx != null) {
+                    val match = taxPriceRegex.find(allLines[nearestPriceIdx].text)
+                    detectedTax = match?.groupValues?.get(1)
+                        ?.replace('L', '1')?.replace('O', '0')?.toDoubleOrNull() ?: 0.0
+                }
+            }
+        }
+
+        return Pair(items, detectedTax)
     }
 
     private fun updateSubtotal() {
+        val currency = java.text.NumberFormat.getCurrencyInstance()
         val subtotal = lineItems.sumOf { it.price }
-        binding.tvSubtotal.text = "Subtotal: ${java.text.NumberFormat.getCurrencyInstance().format(subtotal)}"
+        val tax = binding.etTax.text.toString().toDoubleOrNull() ?: 0.0
+        binding.tvSubtotal.text = "Subtotal: ${currency.format(subtotal)}"
+        binding.tvTotal.text = "Total: ${currency.format(subtotal + tax)}"
     }
 
     private fun showCameraMode() {
@@ -382,13 +433,13 @@ class ScanFragment : Fragment() {
         } else {
             viewModel.saveExpense(title, items, participants)
             Toast.makeText(requireContext(), "Expense saved!", Toast.LENGTH_SHORT).show()
-            lineItems.clear()
-            binding.etExpenseTitle.setText("")
-            binding.etTax.setText("")
-            lineItemAdapter.notifyDataSetChanged()
-            updateSubtotal()
-            showCameraMode()
-            binding.btnCapture.isEnabled = true
+            findNavController().navigate(
+                com.example.ioweyou.R.id.homeFragment,
+                null,
+                androidx.navigation.NavOptions.Builder()
+                    .setPopUpTo(com.example.ioweyou.R.id.homeFragment, true)
+                    .build()
+            )
         }
     }
 
