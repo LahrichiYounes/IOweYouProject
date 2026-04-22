@@ -84,7 +84,12 @@ class MainViewModel : ViewModel() {
 
     fun searchUsers(query: String) {
         viewModelScope.launch {
-            _searchResults.value = repo.searchUsers(query)
+            try {
+                _searchResults.value = repo.searchUsers(query)
+            } catch (e: Exception) {
+                android.util.Log.e("MainViewModel", "searchUsers failed", e)
+                _searchResults.value = emptyList()
+            }
         }
     }
 
@@ -100,7 +105,11 @@ class MainViewModel : ViewModel() {
 
     fun acceptFriendRequest(request: FriendRequest) {
         viewModelScope.launch {
-            repo.acceptFriendRequest(request, currentUser)
+            try {
+                repo.acceptFriendRequest(request, currentUser)
+            } catch (e: Exception) {
+                android.util.Log.e("MainViewModel", "acceptFriendRequest failed", e)
+            }
         }
     }
 

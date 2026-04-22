@@ -96,12 +96,14 @@ class FirestoreRepository {
     fun listenToExpenses(uid: String, onUpdate: (List<Expense>) -> Unit): ListenerRegistration {
         return db.collection("expenses")
             .whereArrayContains("participants", uid)
-            .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
+                if (error != null || snapshot == null) {
+                    android.util.Log.e("FirestoreRepo", "listenToExpenses failed", error)
+                    return@addSnapshotListener
+                }
                 val expenses = snapshot.documents.mapNotNull { doc ->
                     doc.toObject(Expense::class.java)?.copy(id = doc.id)
-                }
+                }.sortedByDescending { it.timestamp }
                 onUpdate(expenses)
             }
     }
